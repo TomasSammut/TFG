@@ -15,12 +15,6 @@ const int rgb_azul = 10;
 const int led_rojo = 22;
 const int led_verde = 24;
 
-unsigned long tiempo;
-unsigned long tiempo2;
-
-int fallos=0;
-int it=2;
-
 unsigned long encoder(unsigned long dec) {
   unsigned long dat=0;
   unsigned long enc=0;
@@ -306,12 +300,7 @@ unsigned long inyectar_fallo(int numero_fallos, unsigned long dato) {
     bits[i]=bit_aleatorio;
 
     bitWrite(dato,bit_aleatorio,(bitRead(dato,bit_aleatorio))^1);
-
-    //Serial.print(bits[i]);
-    //Serial.print(" ");
   }
-
-  //Serial.println();
   
   return dato;
 }
@@ -330,12 +319,7 @@ unsigned long inyectar_fallo_12(int numero_fallos, unsigned long enc) {
     bits[i]=bit_aleatorio;
 
     bitWrite(enc,bit_aleatorio,(bitRead(enc,bit_aleatorio))^1);
-
-    //Serial.print(bits[i]);
-    //Serial.print(" ");
   }
-
-  //Serial.println();
   
   return enc;
 }
@@ -359,229 +343,137 @@ void setup() {
 }
 
 void loop() {
-  while (it<=500) {
-    tiempo = micros();
-    
-    int i0h=31;
-    int i1h=31;
-    int i2h=31;
-    int i3h=31;
-    int i0t=31;
-    int i1t=31;
-    int i2t=31;
-    int i3t=31;
-    
-    // Leemos la humedad relativa
-    float humedad = dht.readHumidity();
-    uint32_t *h = (uint32_t *)&humedad;
+   // Leemos la humedad relativa
+   float humedad = dht.readHumidity();
+   uint32_t *h = (uint32_t *)&humedad;
+ 
+   unsigned long humedad2 = *h;
+ 
+   // Codificamos
+   unsigned long hum_ECC = encoder(*h); // Bits de paridad
+ 
+   // Inyección de fallos
+   *h = inyectar_fallo(1, *h);
+   hum_ECC = inyectar_fallo_12(1, hum_ECC);
+ 
+   // Comprobamos que el ECC es correcto
+   unsigned long hum_decodificada = decoder(*h, hum_ECC); // Dato decodificado
+   float *hum = (float *)&hum_decodificada;
+ 
+   if (hum_decodificada!=humedad2) {
+     fallos++;
+   }
+   
+   delay(10);
+   
+   // Leemos la temperatura en grados centígrados (por defecto)
+   float temperatura = dht.readTemperature();
+   uint32_t *t = (uint32_t *)&temperatura;
+ 
+   unsigned long temperatura2 = *t;
+ 
+   // Codificamos
+   unsigned long temp_ECC = encoder(*t);
   
-    unsigned long humedad2 = *h;
-  
-    // Codificamos
-    unsigned long hum_ECC = encoder(*h); // Bits de paridad
-  
-    //Serial.println("Humedad:");
-    
-    while (bitRead(*h,i0h)==0){
-      //Serial.print(bitRead(*h,i0h));
-      i0h--;
-      }
-  
-    //Serial.print(*h, BIN);
-    //Serial.print(" dato ");
-  
-    // Inyección de fallos
-    *h = inyectar_fallo(1, *h);
-    hum_ECC = inyectar_fallo_12(1, hum_ECC);
-  
-    while (bitRead(*h,i1h)==0){
-      //Serial.print(bitRead(*h,i1h));
-      i1h--;
-      }
-  
-    //Serial.print(*h, BIN);
-    //Serial.println(" error");
-  
-    // Comprobamos que el ECC es correcto
-    unsigned long hum_decodificada = decoder(*h, hum_ECC); // Dato decodificado
-    float *hum = (float *)&hum_decodificada;
-  
-    while (bitRead(*h,i2h)==0){
-      //Serial.print(bitRead(*h,i2h));
-      i2h--;
-      }
-  
-    //Serial.println(*h, BIN);
-  
-    while (bitRead(hum_decodificada,i3h)==0){
-      //Serial.print(bitRead(hum_decodificada,i3h));
-      i3h--;
-      }
-  
-    //Serial.print(hum_decodificada, BIN);
-    //Serial.println(" corregido");
-    //Serial.println();
-  
-    if (hum_decodificada!=humedad2) {
-      fallos++;
-    }
-    
-    delay(10);
-    
-    // Leemos la temperatura en grados centígrados (por defecto)
-    float temperatura = dht.readTemperature();
-    uint32_t *t = (uint32_t *)&temperatura;
-  
-    unsigned long temperatura2 = *t;
-  
-    // Codificamos
-    unsigned long temp_ECC = encoder(*t);
-  
-    //Serial.println("Temperatura:");
-    
-    while (bitRead(*t,i0t)==0){
-      //Serial.print(bitRead(*t,i0t));
-      i0t--;
-      }
-  
-    //Serial.print(*t, BIN);
-    //Serial.print(" dato ");
-  
-  
-    // Inyección de fallos
-    *t = inyectar_fallo(1, *t);
-    temp_ECC = inyectar_fallo_12(1, temp_ECC);
-  
-    while (bitRead(*t,i1t)==0){
-      //Serial.print(bitRead(*t,i1t));
-      i1t--;
-      }
-  
-    //Serial.print(*t, BIN);
-    //Serial.println(" error");
-    
-    // Comprobamos que el ECC es correcto
-    unsigned long temp_decodificada = decoder(*t, temp_ECC);
-    float *temp = (float *)&temp_decodificada;
-  
-    while (bitRead(*t,i2t)==0){
-      //Serial.print(bitRead(*t,i2t));
-      i2t--;
-      }
-  
-    //Serial.println(*t, BIN);
-  
-    while (bitRead(temp_decodificada,i3t)==0){
-      //Serial.print(bitRead(temp_decodificada,i3t));
-      i3t--;
-      }
-  
-    //Serial.print(temp_decodificada, BIN);
-    //Serial.println(" corregido");
-    //Serial.println();
-  
-    if (temp_decodificada!=temperatura2) {
-      fallos++;
-    }
-  
-    //Serial.println(it);
-    //Serial.println(fallos);
-    
-    delay(10);
-    
-    // Comprobamos si ha habido algún error en la lectura
-    if (isnan(humedad) || isnan(temperatura)) {
-      
-      // Poner un led rojo y otro verde ---> si error en lectura encender rojo, si lectura correcta encender verde
-      digitalWrite(led_rojo, HIGH);
-      digitalWrite(led_verde, LOW);
-      
-      lcd.clear(); // Borrar
-      lcd.setCursor(0,0);
-      lcd.print("Error obteniendo");
-      lcd.setCursor(0,1);
-      lcd.print("los datos");
-      delay(5000);
-      lcd.clear(); // Borrar
-      return;
-    }
-    else{
-      digitalWrite(led_rojo, LOW);
-      digitalWrite(led_verde, HIGH);
-    }
-  
-    // Mostramos datos por LCD
-    lcd.clear(); // Borrar
-    lcd.setCursor(0,0);
-    lcd.print("Temp.: "+String(*temp)+" C");
-    lcd.setCursor(0,1);
-    lcd.print("Hum.: "+String(*hum)+" %");
-  
-    // Encendemos led en funcion de temperatura
-    
-    if (temperatura >= 25) { // Hace calor (ROJO)
-      digitalWrite(rgb_rojo, HIGH);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-      delay(2000);
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-    }
-    else if (temperatura <= 10) { // Hace frio (CIAN)
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, HIGH);
-      digitalWrite(rgb_azul, HIGH);
-      delay(2000);
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-    }
-    else { // Temperatura agreable (VERDE)
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, HIGH);
-      digitalWrite(rgb_azul, LOW);
-      delay(2000);
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-    }
-  
-    // Encendemos led en funcion de humedad
-    
-    if (humedad >= 50) { // Hay mucha humedad (MORADO)
-      digitalWrite(rgb_rojo, HIGH);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, HIGH);
-      delay(2000);
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-    }
-    else if (humedad <= 30) { // Hay poca humedad (AZUL)
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, HIGH);
-      delay(2000);
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-    }
-    else { // Humedad optima (VERDE)
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, HIGH);
-      digitalWrite(rgb_azul, LOW);
-      delay(2000);
-      digitalWrite(rgb_rojo, LOW);
-      digitalWrite(rgb_verde, LOW);
-      digitalWrite(rgb_azul, LOW);
-    }
-  
-    it=it+2;
-  
-   tiempo2 = micros();
-  
-   Serial.print((tiempo2-tiempo-4020000)/1000000.0, 6);
-   Serial.println(" segundos");
-  }
+   // Inyección de fallos
+   *t = inyectar_fallo(1, *t);
+   temp_ECC = inyectar_fallo_12(1, temp_ECC);
+
+   // Comprobamos que el ECC es correcto
+   unsigned long temp_decodificada = decoder(*t, temp_ECC);
+   float *temp = (float *)&temp_decodificada;
+ 
+   if (temp_decodificada!=temperatura2) {
+     fallos++;
+   }
+   
+   delay(10);
+   
+   // Comprobamos si ha habido algún error en la lectura
+   if (isnan(humedad) || isnan(temperatura)) {
+     
+     // Poner un led rojo y otro verde ---> si error en lectura encender rojo, si lectura correcta encender verde
+     digitalWrite(led_rojo, HIGH);
+     digitalWrite(led_verde, LOW);
+     
+     lcd.clear(); // Borrar
+     lcd.setCursor(0,0);
+     lcd.print("Error obteniendo");
+     lcd.setCursor(0,1);
+     lcd.print("los datos");
+     delay(5000);
+     lcd.clear(); // Borrar
+     return;
+   }
+   else{
+     digitalWrite(led_rojo, LOW);
+     digitalWrite(led_verde, HIGH);
+   }
+ 
+   // Mostramos datos por LCD
+   lcd.clear(); // Borrar
+   lcd.setCursor(0,0);
+   lcd.print("Temp.: "+String(*temp)+" C");
+   lcd.setCursor(0,1);
+   lcd.print("Hum.: "+String(*hum)+" %");
+ 
+   // Encendemos led en funcion de temperatura
+   
+   if (temperatura >= 25) { // Hace calor (ROJO)
+     digitalWrite(rgb_rojo, HIGH);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+     delay(2000);
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+   }
+   else if (temperatura <= 10) { // Hace frio (CIAN)
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, HIGH);
+     digitalWrite(rgb_azul, HIGH);
+     delay(2000);
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+   }
+   else { // Temperatura agreable (VERDE)
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, HIGH);
+     digitalWrite(rgb_azul, LOW);
+     delay(2000);
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+   }
+ 
+   // Encendemos led en funcion de humedad
+   
+   if (humedad >= 50) { // Hay mucha humedad (MORADO)
+     digitalWrite(rgb_rojo, HIGH);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, HIGH);
+     delay(2000);
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+   }
+   else if (humedad <= 30) { // Hay poca humedad (AZUL)
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, HIGH);
+     delay(2000);
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+   }
+   else { // Humedad optima (VERDE)
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, HIGH);
+     digitalWrite(rgb_azul, LOW);
+     delay(2000);
+     digitalWrite(rgb_rojo, LOW);
+     digitalWrite(rgb_verde, LOW);
+     digitalWrite(rgb_azul, LOW);
+   }
 }
