@@ -15,12 +15,6 @@ const int rgb_azul = 10;
 const int led_rojo = 22;
 const int led_verde = 24;
 
-unsigned long tiempo;
-unsigned long tiempo2;
-
-int fallos=0;
-int it=2;
-
 unsigned long encoder(unsigned long dec) {
   unsigned long dat=0;
   unsigned long enc=0;
@@ -331,8 +325,6 @@ unsigned long inyectar_fallo_12(int numero_fallos, unsigned long enc) {
 }
 
 void setup() {
-  Serial.begin(9600);
-  
   randomSeed(analogRead(A0));
   
   dht.begin(); // Comenzamos el sensor DHT
@@ -349,8 +341,6 @@ void setup() {
 }
 
 void loop() {
-  tiempo = micros();
-  
   // Leemos la humedad relativa
   float humedad = dht.readHumidity();
   uint32_t *h = (uint32_t *)&humedad;
@@ -394,9 +384,6 @@ void loop() {
   if (temp_decodificada!=temperatura2) {
     fallos++;
   }
-
-  //Serial.println(it);
-  //Serial.println(fallos);
   
   delay(10);
  
@@ -487,11 +474,4 @@ void loop() {
     digitalWrite(rgb_verde, LOW);
     digitalWrite(rgb_azul, LOW);
   }
-
-  it=it+2;
-
- tiempo2 = micros();
-
- Serial.print((tiempo2-tiempo-4020000) / 1000000.0, 6);
- Serial.println(" segundos");
 }
