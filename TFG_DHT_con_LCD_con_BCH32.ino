@@ -325,8 +325,6 @@ unsigned long inyectar_fallo_12(int numero_fallos, unsigned long enc) {
 }
 
 void setup() {
-  Serial.begin(9600);
-  
   randomSeed(analogRead(A0));
   
   dht.begin(); // Comenzamos el sensor DHT
